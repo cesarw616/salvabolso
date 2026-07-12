@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { useState, type FormEvent } from "react";
 import Logo from "@/components/Logo";
 
 export default function CadastroPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,12 +15,10 @@ export default function CadastroPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState<"idle" | "success">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus("idle");
 
     if (password.length < 6) {
       setError("A senha deve ter pelo menos 6 caracteres.");
@@ -35,11 +36,34 @@ export default function CadastroPage() {
     setError(null);
     setIsSubmitting(true);
 
-    // Mock: sem backend ainda, apenas simula uma chamada de cadastro.
-    setTimeout(() => {
+    const response = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      setError(data?.error ?? "Não foi possível criar a conta.");
       setIsSubmitting(false);
-      setStatus("success");
-    }, 900);
+      return;
+    }
+
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    setIsSubmitting(false);
+
+    if (result?.error) {
+      router.push("/login");
+      return;
+    }
+
+    router.push("/app/chat");
+    router.refresh();
   }
 
   return (
@@ -201,16 +225,6 @@ export default function CadastroPage() {
                 className="rounded-lg bg-red-50 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-200"
               >
                 {error}
-              </p>
-            )}
-
-            {status === "success" && (
-              <p
-                role="status"
-                className="rounded-lg bg-brand-50 px-3.5 py-2.5 text-sm text-brand-800 dark:bg-brand-900/40 dark:text-brand-100"
-              >
-                Cadastro simulado com sucesso. A criação de conta real será
-                integrada em breve.
               </p>
             )}
           </form>

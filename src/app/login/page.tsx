@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { useState, type FormEvent } from "react";
 import Logo from "@/components/Logo";
 
@@ -12,19 +13,28 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState<"idle" | "success">("idle");
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
-    setStatus("idle");
+    setError(null);
 
-    // Mock: sem backend ainda, apenas simula uma chamada de autenticação.
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setStatus("success");
-      setTimeout(() => router.push("/app/chat"), 700);
-    }, 900);
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    setIsSubmitting(false);
+
+    if (result?.error) {
+      setError("E-mail ou senha inválidos.");
+      return;
+    }
+
+    router.push("/app/chat");
+    router.refresh();
   }
 
   return (
@@ -148,13 +158,12 @@ export default function LoginPage() {
               {isSubmitting ? "Entrando..." : "Entrar"}
             </button>
 
-            {status === "success" && (
+            {error && (
               <p
-                role="status"
-                className="rounded-lg bg-brand-50 px-3.5 py-2.5 text-sm text-brand-800 dark:bg-brand-900/40 dark:text-brand-100"
+                role="alert"
+                className="rounded-lg bg-red-50 px-3.5 py-2.5 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-200"
               >
-                Login simulado com sucesso. A autenticação real será integrada
-                em breve.
+                {error}
               </p>
             )}
           </form>

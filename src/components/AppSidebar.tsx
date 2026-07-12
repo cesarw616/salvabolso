@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import Logo from "@/components/Logo";
 
 const navItems = [
@@ -58,8 +59,14 @@ function NavIcon({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function AppSidebar() {
+type User = {
+  name?: string | null;
+  email?: string | null;
+};
+
+export default function AppSidebar({ user }: { user: User }) {
   const pathname = usePathname();
+  const initial = (user.name ?? user.email ?? "U").charAt(0).toUpperCase();
 
   return (
     <>
@@ -89,23 +96,24 @@ export default function AppSidebar() {
         <div className="mt-auto space-y-3 border-t border-black/10 pt-4 dark:border-white/10">
           <div className="flex items-center gap-2.5 px-1">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 dark:bg-brand-800 dark:text-brand-100">
-              U
+              {initial}
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-foreground">
-                Usuário Teste
+                {user.name ?? "Usuário"}
               </p>
               <p className="truncate text-xs text-foreground/50">
-                usuario@exemplo.com
+                {user.email}
               </p>
             </div>
           </div>
-          <Link
-            href="/login"
-            className="block rounded-lg px-3 py-2 text-sm font-medium text-foreground/70 hover:bg-brand-50 hover:text-foreground dark:hover:bg-white/5"
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-foreground/70 hover:bg-brand-50 hover:text-foreground dark:hover:bg-white/5"
           >
             Sair
-          </Link>
+          </button>
         </div>
       </aside>
 
