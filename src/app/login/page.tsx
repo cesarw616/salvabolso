@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import Logo from "@/components/Logo";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,6 +23,7 @@ export default function LoginPage() {
     setTimeout(() => {
       setIsSubmitting(false);
       setStatus("success");
+      setTimeout(() => router.push("/app/chat"), 700);
     }, 900);
   }
 
