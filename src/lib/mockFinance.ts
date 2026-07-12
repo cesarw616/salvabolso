@@ -18,7 +18,9 @@ export const mockTransactions: Transaction[] = [
   { id: "8", date: "2026-07-03", description: "Freelance", category: "Renda extra", type: "entrada", amount: 600 },
 ];
 
-const currency = new Intl.NumberFormat("pt-BR", {
+const INITIAL_BALANCE = 3500;
+
+export const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
@@ -26,6 +28,46 @@ const currency = new Intl.NumberFormat("pt-BR", {
 export function formatDate(isoDate: string) {
   const [year, month, day] = isoDate.split("-");
   return `${day}/${month}/${year}`;
+}
+
+export function getSaldo() {
+  return mockTransactions.reduce(
+    (acc, t) => acc + (t.type === "entrada" ? t.amount : -t.amount),
+    INITIAL_BALANCE,
+  );
+}
+
+export function getMonthSummary() {
+  const receitas = mockTransactions
+    .filter((t) => t.type === "entrada")
+    .reduce((acc, t) => acc + t.amount, 0);
+  const despesas = mockTransactions
+    .filter((t) => t.type === "saida")
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  return { receitas, despesas, economia: receitas - despesas };
+}
+
+export function getCategoryTotals() {
+  const totals = new Map<string, number>();
+  for (const t of mockTransactions) {
+    if (t.type !== "saida") continue;
+    totals.set(t.category, (totals.get(t.category) ?? 0) + t.amount);
+  }
+  return Array.from(totals, ([category, amount]) => ({ category, amount })).sort(
+    (a, b) => b.amount - a.amount,
+  );
+}
+
+export function getDailyNet() {
+  const totals = new Map<string, number>();
+  for (const t of mockTransactions) {
+    const delta = t.type === "entrada" ? t.amount : -t.amount;
+    totals.set(t.date, (totals.get(t.date) ?? 0) + delta);
+  }
+  return Array.from(totals, ([date, net]) => ({ date, net })).sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
 }
 
 const savingTips = [
@@ -51,26 +93,17 @@ function formatTransactionsSummary() {
     return `• ${formatDate(t.date)} — ${t.description} (${t.category}): ${sign}${currency.format(t.amount)}`;
   });
 
-  const saldo = mockTransactions.reduce(
-    (acc, t) => acc + (t.type === "entrada" ? t.amount : -t.amount),
-    0,
-  );
-
   return [
     "Aqui estão suas últimas transações:",
     "",
     ...lines,
     "",
-    `Saldo atual estimado: ${currency.format(saldo)}.`,
+    `Saldo atual estimado: ${currency.format(getSaldo())}.`,
   ].join("\n");
 }
 
 function formatSaldo() {
-  const saldo = mockTransactions.reduce(
-    (acc, t) => acc + (t.type === "entrada" ? t.amount : -t.amount),
-    0,
-  );
-  return `Seu saldo atual estimado é de ${currency.format(saldo)}, considerando as movimentações registradas até agora.`;
+  return `Seu saldo atual estimado é de ${currency.format(getSaldo())}, considerando as movimentações registradas até agora.`;
 }
 
 export function getAssistantReply(userMessage: string): string {

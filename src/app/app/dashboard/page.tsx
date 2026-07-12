@@ -1,11 +1,49 @@
+import StatTile from "@/components/dashboard/StatTile";
+import CategoryBarChart from "@/components/dashboard/CategoryBarChart";
+import DailyFlowChart from "@/components/dashboard/DailyFlowChart";
+import {
+  currency,
+  getCategoryTotals,
+  getDailyNet,
+  getMonthSummary,
+  getSaldo,
+} from "@/lib/mockFinance";
+
 export default function DashboardPage() {
+  const saldo = getSaldo();
+  const { receitas, despesas, economia } = getMonthSummary();
+  const categoryTotals = getCategoryTotals();
+  const dailyNet = getDailyNet();
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-2 px-6 text-center">
-      <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-      <p className="max-w-sm text-sm text-foreground/60">
-        Em breve: gráficos e resumo das suas finanças. Por enquanto, converse
-        com o assistente no Chat IA.
-      </p>
+    <div className="min-h-screen px-6 py-10 md:px-10">
+      <div className="mx-auto max-w-4xl">
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="mt-1 text-sm text-foreground/60">
+          Resumo com dados de exemplo. Em breve conectado às suas transações
+          reais.
+        </p>
+
+        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatTile label="Saldo atual" value={currency.format(saldo)} />
+          <StatTile
+            label="Receitas"
+            value={currency.format(receitas)}
+            tone="good"
+          />
+          <StatTile label="Despesas" value={currency.format(despesas)} />
+          <StatTile
+            label="Economia"
+            value={currency.format(economia)}
+            tone={economia >= 0 ? "good" : "bad"}
+          />
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <CategoryBarChart data={categoryTotals} />
+          <DailyFlowChart data={dailyNet} />
+        </div>
+      </div>
     </div>
   );
 }
