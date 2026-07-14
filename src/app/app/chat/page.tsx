@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getAssistantReply } from "@/lib/mockFinance";
+import { askAssistant } from "./actions";
 
 type Message = {
   id: string;
@@ -45,7 +45,7 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  function sendMessage(text: string) {
+  async function sendMessage(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isTyping) return;
 
@@ -59,18 +59,12 @@ export default function ChatPage() {
     setInput("");
     setIsTyping(true);
 
-    // Mock: sem IA real ainda, resposta gerada localmente por palavras-chave.
-    setTimeout(
-      () => {
-        const reply = getAssistantReply(trimmed);
-        setMessages((prev) => [
-          ...prev,
-          { id: createId(), role: "assistant", content: reply, time: now() },
-        ]);
-        setIsTyping(false);
-      },
-      600 + Math.random() * 500,
-    );
+    const reply = await askAssistant(trimmed);
+    setMessages((prev) => [
+      ...prev,
+      { id: createId(), role: "assistant", content: reply, time: now() },
+    ]);
+    setIsTyping(false);
   }
 
   function handleSubmit(event: React.FormEvent) {

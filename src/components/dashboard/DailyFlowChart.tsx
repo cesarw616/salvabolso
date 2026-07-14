@@ -1,4 +1,4 @@
-import { currency, formatDate } from "@/lib/mockFinance";
+import { currency, formatDate } from "@/lib/finance";
 
 type DailyNet = { date: string; net: number };
 

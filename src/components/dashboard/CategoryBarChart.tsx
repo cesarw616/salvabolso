@@ -1,4 +1,4 @@
-import { currency } from "@/lib/mockFinance";
+import { currency } from "@/lib/finance";
 
 type CategoryTotal = { category: string; amount: number };
 

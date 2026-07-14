@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import StatTile from "@/components/dashboard/StatTile";
 import CategoryBarChart from "@/components/dashboard/CategoryBarChart";
 import DailyFlowChart from "@/components/dashboard/DailyFlowChart";
@@ -7,21 +9,25 @@ import {
   getDailyNet,
   getMonthSummary,
   getSaldo,
-} from "@/lib/mockFinance";
+  getUserTransactions,
+} from "@/lib/finance";
 
-export default function DashboardPage() {
-  const saldo = getSaldo();
-  const { receitas, despesas, economia } = getMonthSummary();
-  const categoryTotals = getCategoryTotals();
-  const dailyNet = getDailyNet();
+export default async function DashboardPage() {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
+  const transactions = await getUserTransactions(session.user.id);
+  const saldo = getSaldo(transactions);
+  const { receitas, despesas, economia } = getMonthSummary(transactions);
+  const categoryTotals = getCategoryTotals(transactions);
+  const dailyNet = getDailyNet(transactions);
 
   return (
     <div className="min-h-screen px-6 py-10 md:px-10">
       <div className="mx-auto max-w-4xl">
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <p className="mt-1 text-sm text-foreground/60">
-          Resumo com dados de exemplo. Em breve conectado às suas transações
-          reais.
+          Resumo das suas transações.
         </p>
 
         <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">

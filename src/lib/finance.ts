@@ -1,24 +1,7 @@
-export type Transaction = {
-  id: string;
-  date: string;
-  description: string;
-  category: string;
-  type: "entrada" | "saida";
-  amount: number;
-};
+import { prisma } from "@/lib/prisma";
+import type { TransactionModel as Transaction } from "@/generated/prisma/models/Transaction";
 
-export const mockTransactions: Transaction[] = [
-  { id: "1", date: "2026-07-10", description: "Salário", category: "Renda", type: "entrada", amount: 4200 },
-  { id: "2", date: "2026-07-10", description: "Aluguel", category: "Moradia", type: "saida", amount: 1350 },
-  { id: "3", date: "2026-07-09", description: "Supermercado Extra", category: "Mercado", type: "saida", amount: 386.4 },
-  { id: "4", date: "2026-07-08", description: "Uber", category: "Transporte", type: "saida", amount: 27.9 },
-  { id: "5", date: "2026-07-07", description: "Netflix", category: "Assinatura", type: "saida", amount: 44.9 },
-  { id: "6", date: "2026-07-06", description: "Restaurante", category: "Lazer", type: "saida", amount: 98.5 },
-  { id: "7", date: "2026-07-05", description: "Farmácia", category: "Saúde", type: "saida", amount: 63.2 },
-  { id: "8", date: "2026-07-03", description: "Freelance", category: "Renda extra", type: "entrada", amount: 600 },
-];
-
-const INITIAL_BALANCE = 3500;
+export type { Transaction };
 
 export const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -30,27 +13,38 @@ export function formatDate(isoDate: string) {
   return `${day}/${month}/${year}`;
 }
 
-export function getSaldo() {
-  return mockTransactions.reduce(
+export function toIsoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+export function getUserTransactions(userId: string) {
+  return prisma.transaction.findMany({
+    where: { userId },
+    orderBy: { date: "desc" },
+  });
+}
+
+export function getSaldo(transactions: Transaction[]) {
+  return transactions.reduce(
     (acc, t) => acc + (t.type === "entrada" ? t.amount : -t.amount),
-    INITIAL_BALANCE,
+    0,
   );
 }
 
-export function getMonthSummary() {
-  const receitas = mockTransactions
+export function getMonthSummary(transactions: Transaction[]) {
+  const receitas = transactions
     .filter((t) => t.type === "entrada")
     .reduce((acc, t) => acc + t.amount, 0);
-  const despesas = mockTransactions
+  const despesas = transactions
     .filter((t) => t.type === "saida")
     .reduce((acc, t) => acc + t.amount, 0);
 
   return { receitas, despesas, economia: receitas - despesas };
 }
 
-export function getCategoryTotals() {
+export function getCategoryTotals(transactions: Transaction[]) {
   const totals = new Map<string, number>();
-  for (const t of mockTransactions) {
+  for (const t of transactions) {
     if (t.type !== "saida") continue;
     totals.set(t.category, (totals.get(t.category) ?? 0) + t.amount);
   }
@@ -59,11 +53,12 @@ export function getCategoryTotals() {
   );
 }
 
-export function getDailyNet() {
+export function getDailyNet(transactions: Transaction[]) {
   const totals = new Map<string, number>();
-  for (const t of mockTransactions) {
+  for (const t of transactions) {
+    const key = toIsoDate(t.date);
     const delta = t.type === "entrada" ? t.amount : -t.amount;
-    totals.set(t.date, (totals.get(t.date) ?? 0) + delta);
+    totals.set(key, (totals.get(key) ?? 0) + delta);
   }
   return Array.from(totals, ([date, net]) => ({ date, net })).sort((a, b) =>
     a.date.localeCompare(b.date),
@@ -86,11 +81,15 @@ function normalize(text: string) {
     .replace(new RegExp("[" + String.fromCharCode(0x0300) + "-" + String.fromCharCode(0x036f) + "]", "g"), "");
 }
 
-function formatTransactionsSummary() {
-  const recent = mockTransactions.slice(0, 5);
+function formatTransactionsSummary(transactions: Transaction[]) {
+  const recent = transactions.slice(0, 5);
+  if (recent.length === 0) {
+    return "Você ainda não tem transações cadastradas. Que tal adicionar a primeira em 'Transações'?";
+  }
+
   const lines = recent.map((t) => {
     const sign = t.type === "entrada" ? "+" : "-";
-    return `• ${formatDate(t.date)} — ${t.description} (${t.category}): ${sign}${currency.format(t.amount)}`;
+    return `• ${formatDate(toIsoDate(t.date))} — ${t.description} (${t.category}): ${sign}${currency.format(t.amount)}`;
   });
 
   return [
@@ -98,15 +97,15 @@ function formatTransactionsSummary() {
     "",
     ...lines,
     "",
-    `Saldo atual estimado: ${currency.format(getSaldo())}.`,
+    `Saldo atual: ${currency.format(getSaldo(transactions))}.`,
   ].join("\n");
 }
 
-function formatSaldo() {
-  return `Seu saldo atual estimado é de ${currency.format(getSaldo())}, considerando as movimentações registradas até agora.`;
+function formatSaldo(transactions: Transaction[]) {
+  return `Seu saldo atual é de ${currency.format(getSaldo(transactions))}, considerando as movimentações registradas até agora.`;
 }
 
-export function getAssistantReply(userMessage: string): string {
+export function getAssistantReply(userMessage: string, transactions: Transaction[]): string {
   const msg = normalize(userMessage);
 
   const isTransacoes = /historic|transac|extrato|gastei|gastos|movimenta/.test(msg);
@@ -114,8 +113,8 @@ export function getAssistantReply(userMessage: string): string {
   const isDicas = /dica|economiz|poupar|poupanca|orcamento|investir|investimento|reduzir gasto/.test(msg);
   const isGreeting = /^(oi|ola|bom dia|boa tarde|boa noite|opa|eae)\b/.test(msg);
 
-  if (isTransacoes) return formatTransactionsSummary();
-  if (isSaldo) return formatSaldo();
+  if (isTransacoes) return formatTransactionsSummary(transactions);
+  if (isSaldo) return formatSaldo(transactions);
   if (isDicas) {
     const tip = savingTips[Math.floor(Math.random() * savingTips.length)];
     return `Aqui vai uma dica para economizar mais:\n\n${tip}`;
