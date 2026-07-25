@@ -3,10 +3,12 @@ import { auth } from "@/auth";
 import StatTile from "@/components/dashboard/StatTile";
 import CategoryBarChart from "@/components/dashboard/CategoryBarChart";
 import DailyFlowChart from "@/components/dashboard/DailyFlowChart";
+import MonthlyBreakdown from "@/components/dashboard/MonthlyBreakdown";
 import {
   currency,
   getCategoryTotals,
   getDailyNet,
+  getMonthlyBreakdown,
   getMonthSummary,
   getSaldo,
   getUserTransactions,
@@ -19,8 +21,10 @@ export default async function DashboardPage() {
   const transactions = await getUserTransactions(session.user.id);
   const saldo = getSaldo(transactions);
   const { receitas, despesas, economia } = getMonthSummary(transactions);
-  const categoryTotals = getCategoryTotals(transactions);
+  const expenseCategoryTotals = getCategoryTotals(transactions, "saida");
+  const incomeCategoryTotals = getCategoryTotals(transactions, "entrada");
   const dailyNet = getDailyNet(transactions);
+  const monthlyBreakdown = getMonthlyBreakdown(transactions);
 
   return (
     <div className="min-h-screen px-6 py-10 md:px-10">
@@ -30,7 +34,10 @@ export default async function DashboardPage() {
           Resumo das suas transações.
         </p>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <h2 className="mt-8 text-sm font-semibold text-foreground/70">
+          Balanço geral (todos os meses)
+        </h2>
+        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatTile label="Saldo atual" value={currency.format(saldo)} />
           <StatTile
             label="Receitas"
@@ -46,8 +53,26 @@ export default async function DashboardPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <CategoryBarChart data={categoryTotals} />
+          <CategoryBarChart
+            title="Despesas por categoria"
+            subtitle="Total de saídas no período, por categoria."
+            data={expenseCategoryTotals}
+            tone="expense"
+          />
+          <CategoryBarChart
+            title="Receitas por categoria"
+            subtitle="Total de entradas no período, por categoria."
+            data={incomeCategoryTotals}
+            tone="income"
+          />
+        </div>
+
+        <div className="mt-6">
           <DailyFlowChart data={dailyNet} />
+        </div>
+
+        <div className="mt-6">
+          <MonthlyBreakdown data={monthlyBreakdown} />
         </div>
       </div>
     </div>

@@ -2,37 +2,50 @@ import { currency } from "@/lib/finance";
 
 type CategoryTotal = { category: string; amount: number };
 
-export default function CategoryBarChart({ data }: { data: CategoryTotal[] }) {
+export default function CategoryBarChart({
+  data,
+  title,
+  subtitle,
+  tone = "expense",
+}: {
+  data: CategoryTotal[];
+  title: string;
+  subtitle: string;
+  tone?: "income" | "expense";
+}) {
   const max = Math.max(...data.map((d) => d.amount), 1);
+  const barColor = tone === "income" ? "bg-brand-600" : "bg-red-600";
 
   return (
     <div className="rounded-xl border border-black/10 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-      <h2 className="text-sm font-semibold text-foreground">
-        Gastos por categoria
-      </h2>
-      <p className="mt-0.5 text-xs text-foreground/50">
-        Total de saídas no período, por categoria.
-      </p>
+      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      <p className="mt-0.5 text-xs text-foreground/50">{subtitle}</p>
 
-      <div className="mt-5 space-y-2.5">
-        {data.map((d) => (
-          <div key={d.category} className="flex items-center gap-3">
-            <span className="w-24 shrink-0 truncate text-xs text-foreground/70">
-              {d.category}
-            </span>
-            <div className="flex-1">
-              <div
-                title={`${d.category}: ${currency.format(d.amount)}`}
-                className="h-3 rounded-r bg-brand-600 transition-[filter] hover:brightness-110"
-                style={{ width: `${Math.max((d.amount / max) * 100, 4)}%` }}
-              />
+      {data.length === 0 ? (
+        <p className="mt-5 text-center text-sm text-foreground/50">
+          Nenhuma transação nesta categoria ainda.
+        </p>
+      ) : (
+        <div className="mt-5 space-y-2.5">
+          {data.map((d) => (
+            <div key={d.category} className="flex items-center gap-3">
+              <span className="w-24 shrink-0 truncate text-xs text-foreground/70">
+                {d.category}
+              </span>
+              <div className="flex-1">
+                <div
+                  title={`${d.category}: ${currency.format(d.amount)}`}
+                  className={`h-3 rounded-r transition-[filter] hover:brightness-110 ${barColor}`}
+                  style={{ width: `${Math.max((d.amount / max) * 100, 4)}%` }}
+                />
+              </div>
+              <span className="w-20 shrink-0 text-right text-xs font-medium tabular-nums text-foreground/80">
+                {currency.format(d.amount)}
+              </span>
             </div>
-            <span className="w-20 shrink-0 text-right text-xs font-medium tabular-nums text-foreground/80">
-              {currency.format(d.amount)}
-            </span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <details className="mt-4">
         <summary className="cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700">

@@ -18,7 +18,8 @@ export default function DailyFlowChart({ data }: { data: DailyNet[] }) {
         Verde: saldo positivo no dia · Vermelho: saldo negativo no dia
       </p>
 
-      <div className="mt-6 flex items-end justify-between gap-1">
+      <div className="mt-6 overflow-x-auto">
+        <div className="flex items-end gap-2 pb-1">
         {data.map((d) => {
           const isPositive = d.net >= 0;
           const barHeight = Math.max(
@@ -30,7 +31,7 @@ export default function DailyFlowChart({ data }: { data: DailyNet[] }) {
             (!isPositive && Math.abs(d.net) === maxNegativeAbs && maxNegativeAbs > 0);
 
           return (
-            <div key={d.date} className="flex flex-1 flex-col items-center">
+            <div key={d.date} className="flex w-10 shrink-0 flex-col items-center">
               <div
                 className="flex flex-col justify-end"
                 style={{ height: ZONE_HEIGHT }}
@@ -75,6 +76,7 @@ export default function DailyFlowChart({ data }: { data: DailyNet[] }) {
             </div>
           );
         })}
+        </div>
       </div>
 
       <details className="mt-4">

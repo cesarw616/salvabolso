@@ -3,15 +3,19 @@
 export default function DeleteButton({
   id,
   action,
+  confirmMessage = "Excluir esta transação?",
+  label = "Excluir transação",
 }: {
   id: string;
   action: (formData: FormData) => void;
+  confirmMessage?: string;
+  label?: string;
 }) {
   return (
     <form
       action={action}
       onSubmit={(event) => {
-        if (!confirm("Excluir esta transação?")) {
+        if (!confirm(confirmMessage)) {
           event.preventDefault();
         }
       }}
@@ -20,7 +24,7 @@ export default function DeleteButton({
       <button
         type="submit"
         className="shrink-0 rounded-lg p-1.5 text-foreground/40 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
-        aria-label="Excluir transação"
+        aria-label={label}
       >
         <svg
           width="16"

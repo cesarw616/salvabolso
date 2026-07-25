@@ -42,15 +42,49 @@ export function getMonthSummary(transactions: Transaction[]) {
   return { receitas, despesas, economia: receitas - despesas };
 }
 
-export function getCategoryTotals(transactions: Transaction[]) {
+export function getCategoryTotals(transactions: Transaction[], type: "entrada" | "saida") {
   const totals = new Map<string, number>();
   for (const t of transactions) {
-    if (t.type !== "saida") continue;
+    if (t.type !== type) continue;
     totals.set(t.category, (totals.get(t.category) ?? 0) + t.amount);
   }
   return Array.from(totals, ([category, amount]) => ({ category, amount })).sort(
     (a, b) => b.amount - a.amount,
   );
+}
+
+export type MonthSummary = {
+  key: string;
+  label: string;
+  receitas: number;
+  despesas: number;
+  saldo: number;
+};
+
+const monthLabelFormatter = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" });
+
+function capitalize(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function getMonthlyBreakdown(transactions: Transaction[]): MonthSummary[] {
+  const totals = new Map<string, { receitas: number; despesas: number }>();
+
+  for (const t of transactions) {
+    const key = toIsoDate(t.date).slice(0, 7);
+    const entry = totals.get(key) ?? { receitas: 0, despesas: 0 };
+    if (t.type === "entrada") entry.receitas += t.amount;
+    else entry.despesas += t.amount;
+    totals.set(key, entry);
+  }
+
+  return Array.from(totals, ([key, { receitas, despesas }]) => ({
+    key,
+    label: capitalize(monthLabelFormatter.format(new Date(`${key}-01T00:00:00`))),
+    receitas,
+    despesas,
+    saldo: receitas - despesas,
+  })).sort((a, b) => b.key.localeCompare(a.key));
 }
 
 export function getDailyNet(transactions: Transaction[]) {

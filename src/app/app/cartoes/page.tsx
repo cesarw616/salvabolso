@@ -1,66 +1,72 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { currency, formatDate, getUserTransactions, toIsoDate } from "@/lib/finance";
-import { createTransaction, deleteTransaction } from "./actions";
+import { prisma } from "@/lib/prisma";
+import { currency } from "@/lib/finance";
+import { createCard, deleteCard } from "./actions";
 import DeleteButton from "@/components/transacoes/DeleteButton";
-import ImportCsvForm from "@/components/transacoes/ImportCsvForm";
 
-export default async function TransacoesPage() {
+export default async function CartoesPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  const transactions = await getUserTransactions(session.user.id);
+
+  const cards = await prisma.card.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div className="min-h-screen px-6 py-10 md:px-10">
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-bold text-foreground">Transações</h1>
+        <h1 className="text-2xl font-bold text-foreground">Cartões</h1>
         <p className="mt-1 text-sm text-foreground/60">
-          Cadastre, edite e acompanhe suas movimentações.
+          Cadastre seus cartões manualmente por enquanto. Em breve você vai poder
+          conectar sua conta automaticamente via Open Finance.
         </p>
 
         <form
-          action={createTransaction}
+          action={createCard}
           className="mt-6 grid grid-cols-2 gap-3 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-white/5 md:grid-cols-5"
         >
           <input
             type="text"
-            name="description"
-            placeholder="Descrição"
+            name="name"
+            placeholder="Apelido (ex: Nubank Roxinho)"
             required
             className="col-span-2 rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/10 md:col-span-2"
           />
           <input
             type="text"
-            name="category"
-            placeholder="Categoria"
+            name="bank"
+            placeholder="Banco/Instituição"
             required
             className="rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/10"
           />
           <select
             name="type"
             required
-            defaultValue="saida"
+            defaultValue="credito"
             className="rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/10"
           >
-            <option value="entrada">Entrada</option>
-            <option value="saida">Saída</option>
+            <option value="credito">Crédito</option>
+            <option value="debito">Débito</option>
           </select>
           <input
-            type="number"
-            name="amount"
-            step="0.01"
-            min="0.01"
-            placeholder="Valor"
-            required
+            type="text"
+            name="lastDigits"
+            placeholder="Últimos 4 dígitos"
+            inputMode="numeric"
+            maxLength={4}
+            pattern="\d{4}"
             className="rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/10"
           />
           <input
-            type="date"
-            name="date"
-            required
-            defaultValue={new Date().toISOString().slice(0, 10)}
-            className="col-span-2 rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/10 md:col-span-1"
+            type="number"
+            name="limit"
+            step="0.01"
+            min="0"
+            placeholder="Limite (opcional)"
+            className="col-span-2 rounded-lg border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/10 md:col-span-2"
           />
           <button
             type="submit"
@@ -70,40 +76,36 @@ export default async function TransacoesPage() {
           </button>
         </form>
 
-        <ImportCsvForm />
-
-        <div className="mt-6 divide-y divide-black/10 overflow-hidden rounded-xl border border-black/10 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-white/5">
-          {transactions.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-foreground/50">
-              Nenhuma transação cadastrada ainda.
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {cards.length === 0 && (
+            <p className="col-span-full rounded-xl border border-black/10 bg-white px-4 py-6 text-center text-sm text-foreground/50 dark:border-white/10 dark:bg-white/5">
+              Nenhum cartão cadastrado ainda.
             </p>
           )}
-          {transactions.map((t) => (
+          {cards.map((card) => (
             <div
-              key={t.id}
-              className="flex items-center justify-between gap-4 px-4 py-3"
+              key={card.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-white/5"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {t.description}
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {card.name}
                 </p>
                 <p className="text-xs text-foreground/50">
-                  {formatDate(toIsoDate(t.date))} · {t.category}
+                  {card.bank} · {card.type === "credito" ? "Crédito" : "Débito"}
+                  {card.lastDigits ? ` · •••• ${card.lastDigits}` : ""}
                 </p>
+                {card.limit != null && (
+                  <p className="mt-1 text-xs text-foreground/70">
+                    Limite: {currency.format(card.limit)}
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span
-                  className={`text-sm font-semibold ${
-                    t.type === "entrada" ? "text-brand-600" : "text-foreground/80"
-                  }`}
-                >
-                  {t.type === "entrada" ? "+" : "-"}
-                  {currency.format(t.amount)}
-                </span>
                 <Link
-                  href={`/app/transacoes/${t.id}`}
+                  href={`/app/cartoes/${card.id}`}
                   className="rounded-lg p-1.5 text-foreground/40 transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
-                  aria-label="Editar transação"
+                  aria-label="Editar cartão"
                 >
                   <svg
                     width="16"
@@ -119,7 +121,12 @@ export default async function TransacoesPage() {
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                   </svg>
                 </Link>
-                <DeleteButton id={t.id} action={deleteTransaction} />
+                <DeleteButton
+                  id={card.id}
+                  action={deleteCard}
+                  confirmMessage="Excluir este cartão?"
+                  label="Excluir cartão"
+                />
               </div>
             </div>
           ))}

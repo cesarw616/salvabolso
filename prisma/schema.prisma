@@ -18,6 +18,7 @@ model User {
   passwordHash String
   createdAt    DateTime      @default(now())
   transactions Transaction[]
+  cards        Card[]
 }
 
 model Transaction {
@@ -30,4 +31,16 @@ model Transaction {
   createdAt   DateTime @default(now())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Card {
+  id         String   @id @default(cuid())
+  name       String
+  bank       String
+  type       String // "credito" | "debito"
+  lastDigits String?
+  limit      Float?
+  createdAt  DateTime @default(now())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

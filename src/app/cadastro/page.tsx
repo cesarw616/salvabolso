@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useState, type FormEvent } from "react";
 import Logo from "@/components/Logo";
+import { rememberAccount } from "@/lib/knownAccounts";
 
 export default function CadastroPage() {
   const router = useRouter();
@@ -55,11 +56,15 @@ export default function CadastroPage() {
       redirect: false,
     });
 
-    setIsSubmitting(false);
-
     if (result?.error) {
+      setIsSubmitting(false);
       router.push("/login");
       return;
+    }
+
+    const session = await getSession();
+    if (session?.user?.email) {
+      rememberAccount({ email: session.user.email, name: session.user.name ?? session.user.email });
     }
 
     router.push("/app/chat");

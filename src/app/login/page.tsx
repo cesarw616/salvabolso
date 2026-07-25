@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
-import { useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getSession, signIn } from "next-auth/react";
+import { Suspense, useState, type FormEvent } from "react";
 import Logo from "@/components/Logo";
+import { rememberAccount } from "@/lib/knownAccounts";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -26,11 +28,15 @@ export default function LoginPage() {
       redirect: false,
     });
 
-    setIsSubmitting(false);
-
     if (result?.error) {
+      setIsSubmitting(false);
       setError("E-mail ou senha inválidos.");
       return;
+    }
+
+    const session = await getSession();
+    if (session?.user?.email) {
+      rememberAccount({ email: session.user.email, name: session.user.name ?? session.user.email });
     }
 
     router.push("/app/chat");
@@ -180,5 +186,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

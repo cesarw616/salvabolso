@@ -13,11 +13,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: {},
       },
       async authorize(credentials) {
-        const email = credentials?.email;
+        const rawEmail = credentials?.email;
         const password = credentials?.password;
-        if (typeof email !== "string" || typeof password !== "string") {
+        if (typeof rawEmail !== "string" || typeof password !== "string") {
           return null;
         }
+        const email = rawEmail.trim().toLowerCase();
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return null;
